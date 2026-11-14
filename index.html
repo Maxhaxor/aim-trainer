@@ -3,6 +3,7 @@
 <style>body{margin:0;background:#0b0f1c;color:#ffd9a8;font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh}</style></head>
 <body><div id="s">Loading aim trainer…</div>
 <script type="module">
+try {
 const N=8;const parts=[];
 for(let i=0;i<N;i++) parts.push((await import('./g'+i+'.js')).default);
 const b64=parts.join('');
@@ -11,4 +12,8 @@ const ds=new DecompressionStream('gzip');
 const stream=new Blob([bin]).stream().pipeThrough(ds);
 const html=await new Response(stream).text();
 document.open();document.write(html);document.close();
+} catch(e) {
+document.getElementById('s').textContent='Load failed: '+(e.message||e);
+console.error(e);
+}
 </script></body></html>
