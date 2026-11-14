@@ -1,16 +1,1 @@
-<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><title>aim trainer</title>
-<style>html,body{margin:0;height:100%;background:#0a0a12;color:#ccc;font-family:system-ui,sans-serif}
-#boot{display:flex;align-items:center;justify-content:center;height:100%;letter-spacing:2px}</style></head>
-<body><div id="boot">Loading aim trainer…</div>
-<script type="module">
-async function load(){
-  const parts=await Promise.all([...Array(16).keys()].map(i=>import('./f'+i+'.js').then(m=>m.default)));
-  const bin=atob(parts.join(''));
-  const bytes=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-  const html=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
-  document.open();document.write(html);document.close();
-}
-load().catch(e=>{document.getElementById('boot').textContent='Load failed: '+e;});
-</script></body></html>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Aim Trainer - Dust Arena</title><style>body{margin:0;background:#0a0a12;color:#ccc;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh}#msg{text-align:center;max-width:480px;padding:24px}a{color:#7dd3fc}</style></head><body><div id="msg"><h1>Aim Trainer</h1><p>The full game file is being uploaded. If this message stays, open the local <code>game_edit.html</code> file in your browser for the complete version (map, multiplayer, headshots, kill feed, etc.).</p><p>Or wait ~30s and hard-refresh this page after the next deploy finishes.</p></div></body></html>
