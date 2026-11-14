@@ -1,35 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>aim trainer</title>
-<style>
-html,body{margin:0;height:100%;background:#0a0a12;color:#ccc;font-family:system-ui,sans-serif}
-#boot{display:flex;align-items:center;justify-content:center;height:100%;letter-spacing:2px}
-</style>
-</head>
-<body>
-<div id="boot">Loading aim trainer…</div>
+<html lang="en"><head><meta charset="UTF-8"/><title>aim trainer</title>
+<style>html,body{margin:0;height:100%;background:#0a0a12;color:#ccc;font-family:system-ui,sans-serif}
+#boot{display:flex;align-items:center;justify-content:center;height:100%;letter-spacing:2px}</style></head>
+<body><div id="boot">Loading aim trainer…</div>
 <script type="module">
-async function load() {
-  const names = ['p0a','p0b','p1a','p1b','p2a','p2b'];
-  const parts = await Promise.all(names.map(n => import('./' + n + '.js').then(m => m.default)));
-  const b64 = parts.join('');
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  const ds = new DecompressionStream('gzip');
-  const stream = new Blob([bytes]).stream().pipeThrough(ds);
-  const html = await new Response(stream).text();
-  document.open();
-  document.write(html);
-  document.close();
+async function load(){
+  const N=12;
+  const parts=await Promise.all(Array.from({length:N},(_,i)=>import('./c'+i+'.js').then(m=>m.default)));
+  const b64=parts.join('');
+  const bin=atob(b64);
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+  const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const html=await new Response(stream).text();
+  document.open();document.write(html);document.close();
 }
-load().catch(e => {
-  document.getElementById('boot').textContent = 'Load failed: ' + e;
-  console.error(e);
-});
-</script>
-</body>
-</html>
+load().catch(e=>{document.getElementById('boot').textContent='Load failed: '+e;});
+</script></body></html>
