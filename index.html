@@ -4,14 +4,16 @@
 <body><div id="s">Loading aim trainer…</div>
 <script type="module">
 try {
-const b64="PLACEHOLDER_TOO_LARGE";
+const N=9;const parts=[];
+for(let i=0;i<N;i++) parts.push((await import('./g'+i+'.js')).default);
+const b64=parts.join('');
 const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
-const ds=new DecompressionStream("gzip");
+const ds=new DecompressionStream('gzip');
 const stream=new Blob([bin]).stream().pipeThrough(ds);
 const html=await new Response(stream).text();
 document.open();document.write(html);document.close();
 } catch(e) {
-document.getElementById("s").textContent="Load failed: "+(e.message||e);
+document.getElementById('s').textContent='Load failed: '+(e.message||e);
 console.error(e);
 }
 </script></body></html>
