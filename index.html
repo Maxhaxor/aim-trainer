@@ -5,7 +5,7 @@
 <body><div id="boot">Loading aim trainer…</div>
 <script type="module">
 async function load(){
-  const parts=await Promise.all([0,1,2,3,4,5,6,7].map(i=>import('./e'+i+'.js').then(m=>m.default)));
+  const parts=await Promise.all([...Array(16).keys()].map(i=>import('./f'+i+'.js').then(m=>m.default)));
   const bin=atob(parts.join(''));
   const bytes=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
