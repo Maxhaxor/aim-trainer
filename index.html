@@ -4,7 +4,7 @@
 <body><div id="s">Loading aim trainer…</div>
 <script type="module">
 try {
-const N=8;const parts=[];
+const N=9;const parts=[];
 for(let i=0;i<N;i++) parts.push((await import('./g'+i+'.js')).default);
 const b64=parts.join('');
 const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
