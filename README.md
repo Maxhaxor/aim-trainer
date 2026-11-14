@@ -1,11 +1,7 @@
 # Aim Trainer
 
-Browser-based 3D aim trainer (Three.js) with CS:GO-style movement, procedural AWP, Squares + Tracking modes, and multiplayer in Squares.
+Multiplayer aim trainer with AWP + knife, damage, and visible held weapons.
 
-## Play
+Play: https://aim-trainer-phi-five.vercel.app/
 
-Open `index.html` in a browser (or the Vercel deployment).
-
-## Multiplayer
-
-Click **Squares** — first player becomes host; others who click Squares join the same PeerJS room and see each other as colored bodies.
+Controls: WASD, Space bhop, RMB scope, LMB shoot, 1 AWP / 2 knife, drop .stl for custom models (name with knife for knife STL).
