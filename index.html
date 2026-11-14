@@ -5,14 +5,11 @@
 <body><div id="boot">Loading aim trainer…</div>
 <script type="module">
 async function load(){
-  const N=12;
-  const parts=await Promise.all(Array.from({length:N},(_,i)=>import('./c'+i+'.js').then(m=>m.default)));
-  const b64=parts.join('');
-  const bin=atob(b64);
+  const parts=await Promise.all([0,1,2,3].map(i=>import('./d'+i+'.js').then(m=>m.default)));
+  const bin=atob(parts.join(''));
   const bytes=new Uint8Array(bin.length);
   for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-  const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-  const html=await new Response(stream).text();
+  const html=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
   document.open();document.write(html);document.close();
 }
 load().catch(e=>{document.getElementById('boot').textContent='Load failed: '+e;});
