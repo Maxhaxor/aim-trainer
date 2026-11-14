@@ -1,19 +1,37 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aim Trainer</title>
-<style>body{margin:0;background:#0b0f1c;color:#ffd9a8;font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh}</style></head>
-<body><div id="s">Loading aim trainer…</div>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>aim trainer</title>
+<style>
+html,body{margin:0;height:100%;background:#0a0a12;color:#ccc;font-family:system-ui,sans-serif}
+#boot{display:flex;align-items:center;justify-content:center;height:100%;letter-spacing:2px}
+</style>
+</head>
+<body>
+<div id="boot">Loading aim trainer…</div>
 <script type="module">
-try {
-const N=9;const parts=[];
-for(let i=0;i<N;i++) parts.push((await import('./g'+i+'.js')).default);
-const b64=parts.join('');
-const bin=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
-const ds=new DecompressionStream('gzip');
-const stream=new Blob([bin]).stream().pipeThrough(ds);
-const html=await new Response(stream).text();
-document.open();document.write(html);document.close();
-} catch(e) {
-document.getElementById('s').textContent='Load failed: '+(e.message||e);
-console.error(e);
+const N = 10;
+async function load() {
+  const parts = await Promise.all(
+    Array.from({ length: N }, (_, i) => import('./g' + i + '.js').then(m => m.default))
+  );
+  const b64 = parts.join('');
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const ds = new DecompressionStream('gzip');
+  const stream = new Blob([bytes]).stream().pipeThrough(ds);
+  const html = await new Response(stream).text();
+  document.open();
+  document.write(html);
+  document.close();
 }
-</script></body></html>
+load().catch(e => {
+  document.getElementById('boot').textContent = 'Load failed: ' + e;
+  console.error(e);
+});
+</script>
+</body>
+</html>
