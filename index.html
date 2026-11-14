@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Aim Trainer</title>
 <style>body{margin:0;background:#0b0f1c;color:#ffd9a8;font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh}</style></head>
-<body><div>Loading aim trainer…</div>
+<body><div>Loading…</div>
 <script type="module">
-const N=12;const parts=[];
-for(let i=0;i<N;i++){parts.push((await import('./p'+i+'.js')).default);}
+const N=30;const parts=[];
+for(let i=0;i<N;i++) parts.push((await import('./p'+i+'.js')).default);
 const b64=parts.join('');const bin=atob(b64);const bytes=new Uint8Array(bin.length);
-for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-const html=new TextDecoder().decode(bytes);document.open();document.write(html);document.close();
+for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+document.open();document.write(new TextDecoder().decode(bytes));document.close();
 </script></body></html>
