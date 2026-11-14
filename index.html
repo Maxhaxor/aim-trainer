@@ -12,11 +12,8 @@ html,body{margin:0;height:100%;background:#0a0a12;color:#ccc;font-family:system-
 <body>
 <div id="boot">Loading aim trainer…</div>
 <script type="module">
-const N = 10;
 async function load() {
-  const parts = await Promise.all(
-    Array.from({ length: N }, (_, i) => import('./g' + i + '.js').then(m => m.default))
-  );
+  const parts = await Promise.all([0,1,2].map(i => import('./p' + i + '.js').then(m => m.default)));
   const b64 = parts.join('');
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
