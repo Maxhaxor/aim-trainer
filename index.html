@@ -1,16 +1,360 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><title>aim trainer</title>
-<style>html,body{margin:0;height:100%;background:#0a0a12;color:#ccc;font-family:system-ui,sans-serif}
-#boot{display:flex;align-items:center;justify-content:center;height:100%;letter-spacing:2px}</style></head>
-<body><div id="boot">Loading aim trainer…</div>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aim Trainer · Dust Arena</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{background:#0b0f1c;min-height:100vh;display:flex;justify-content:center;align-items:center;font-family:system-ui,sans-serif;overflow:hidden;color:#ccc}
+#wrap{position:relative;width:min(100vw,1100px);height:min(100vh,700px);background:#000;box-shadow:0 0 60px #000}
+canvas{display:block;width:100%;height:100%;cursor:none}
+#menu{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,10,18,.94);z-index:100;gap:14px;transition:opacity .25s}
+#menu.hidden{opacity:0;pointer-events:none}
+h1{font-size:2.1rem;letter-spacing:4px;color:#e8eef8}
+.sub{color:#64748b;margin-bottom:6px}
+.card{background:#161b2a;border:1px solid #2a3348;border-radius:10px;padding:14px 20px;width:min(360px,90vw);cursor:pointer;transition:.15s}
+.card:hover{border-color:#5b8def;transform:translateY(-2px)}
+.card .n{font-weight:600;color:#e2e8f0;font-size:1.05rem}
+.card .d{font-size:.82rem;color:#94a3b8;margin-top:4px}
+#cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:18px;height:18px;pointer-events:none;z-index:5}
+#cross i{position:absolute;background:#fff}
+#cross .t,#cross .b{width:2px;height:6px;left:8px}#cross .t{top:0}#cross .b{bottom:0}
+#cross .l,#cross .r{height:2px;width:6px;top:8px}#cross .l{left:0}#cross .r{right:0}
+#hud{position:absolute;inset:0;pointer-events:none;z-index:10;font-size:.8rem;color:#94a3b8}
+#hud .tl{position:absolute;top:12px;left:12px}
+#hud .tr{position:absolute;top:12px;right:12px}
+#hud .bl{position:absolute;bottom:12px;left:12px}
+#hud .br{position:absolute;bottom:12px;right:12px}
+#hud .bc{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#1e2535;padding:4px 12px;border-radius:999px}
+#back{position:absolute;top:12px;left:12px;z-index:20;background:#1e2535;border:1px solid #334155;color:#cbd5e1;padding:6px 12px;border-radius:6px;cursor:pointer;opacity:0;pointer-events:none}
+#back.visible{opacity:1;pointer-events:auto}
+.hint{position:absolute;bottom:44px;left:50%;transform:translateX(-50%);font-size:.72rem;color:#64748b;text-align:center;pointer-events:none}
+kbd{background:#1e2535;padding:1px 5px;border-radius:3px;border:1px solid #334155}
+#kill{position:absolute;top:50px;right:12px;width:200px;pointer-events:none;z-index:12;font-size:.78rem}
+#kill div{background:rgba(0,0,0,.5);padding:3px 8px;margin-bottom:3px;border-radius:4px}
+</style></head><body>
+<div id="wrap">
+<canvas id="c" width="1100" height="700"></canvas>
+<div id="cross"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i></div>
+<div id="hud">
+  <div class="tl" id="fps">FPS –</div>
+  <div class="tr" id="mode"></div>
+  <div class="bl" id="spd">0.0 u/s</div>
+  <div class="br" id="acc">–</div>
+  <div class="bc" id="wpn">AWP</div>
+</div>
+<div id="kill"></div>
+<button id="back">← menu</button>
+<div class="hint"><kbd>WASD</kbd> move · <kbd>SPACE</kbd> jump · <kbd>LMB</kbd> shoot · <kbd>RMB</kbd> scope · <kbd>T</kbd> 3rd person · <kbd>1</kbd>/<kbd>2</kbd> weapons · <kbd>ESC</kbd> menu</div>
+<div id="menu">
+  <h1>aim trainer</h1>
+  <div class="sub">dust arena · guns · jump · 3rd person</div>
+  <div class="card" data-m="squares"><div class="n">Squares</div><div class="d">Hit targets. Accuracy rises on hit, falls on miss.</div></div>
+  <div class="card" data-m="tracking"><div class="n">Tracking</div><div class="d">Keep aim on the moving orb.</div></div>
+</div>
+</div>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.128.0/build/three.module.js"}}</script>
 <script type="module">
-async function load(){
-  const parts=await Promise.all([...Array(16).keys()].map(i=>import('./f'+i+'.js').then(m=>m.default)));
-  const bin=atob(parts.join(''));
-  const bytes=new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
-  const html=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
-  document.open();document.write(html);document.close();
+import * as THREE from 'three';
+
+const canvas = document.getElementById('c');
+const menu = document.getElementById('menu');
+const back = document.getElementById('back');
+const fpsEl = document.getElementById('fps');
+const spdEl = document.getElementById('spd');
+const accEl = document.getElementById('acc');
+const wpnEl = document.getElementById('wpn');
+const modeEl = document.getElementById('mode');
+const killEl = document.getElementById('kill');
+
+const W = 1100, H = 700;
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87a0c0);
+scene.fog = new THREE.Fog(0x87a0c0, 40, 120);
+
+const camera = new THREE.PerspectiveCamera(75, W/H, 0.1, 300);
+const clock = new THREE.Clock();
+
+const sun = new THREE.DirectionalLight(0xffe6c0, 1.3);
+sun.position.set(30, 50, 20);
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0x607080, 0.55));
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(200, 200),
+  new THREE.MeshStandardMaterial({ color: 0x4a5a3a, roughness: 0.8 })
+);
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+const grid = new THREE.GridHelper(200, 40, 0x3a4a2a, 0x3a4a2a);
+grid.position.y = 0.01;
+scene.add(grid);
+
+const boxMat = new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.7 });
+for (let i = 0; i < 18; i++) {
+  const s = 1.2 + Math.random() * 2.5;
+  const h = 1 + Math.random() * 3.5;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(s, h, s), boxMat);
+  m.position.set((Math.random()-0.5)*70, h/2, (Math.random()-0.5)*70);
+  scene.add(m);
 }
-load().catch(e=>{document.getElementById('boot').textContent='Load failed: '+e;});
+
+const GRAVITY = 22, JUMP_V = 8.2, MOVE = 7.5, ACCEL = 18, FRICTION = 8;
+let px = 0, py = 1.7, pz = 8;
+let vx = 0, vy = 0, vz = 0;
+let onGround = true;
+let yaw = 0, pitch = 0;
+let gameActive = false, mode = null;
+let third = false;
+let weapon = 'awp';
+let scoped = false;
+let hits = 0, shots = 0;
+const keys = {w:0,a:0,s:0,d:0,space:0};
+
+const gun = new THREE.Group();
+const gunMat = new THREE.MeshStandardMaterial({ color: 0x2a3220, metalness: 0.4, roughness: 0.5 });
+const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.1, 8), gunMat);
+barrel.rotation.z = Math.PI/2; barrel.position.set(0.55, 0, 0);
+const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.14, 0.12), gunMat);
+body.position.set(0.1, -0.02, 0);
+const stock = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.12, 0.08), gunMat);
+stock.position.set(-0.25, -0.04, 0);
+const scopeM = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.28, 10), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
+scopeM.rotation.z = Math.PI/2; scopeM.position.set(0.15, 0.1, 0);
+gun.add(barrel, body, stock, scopeM);
+gun.position.set(0.28, -0.22, -0.55);
+camera.add(gun);
+scene.add(camera);
+
+const knife = new THREE.Group();
+const kMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.3 });
+const blade = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.28, 0.01), kMat);
+blade.position.set(0, 0.12, 0);
+const handle = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 0.03), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+handle.position.set(0, -0.05, 0);
+knife.add(blade, handle);
+knife.position.set(0.25, -0.25, -0.4);
+knife.visible = false;
+camera.add(knife);
+
+const targets = [];
+const targetMat = new THREE.MeshStandardMaterial({ color: 0xe74c3c, emissive: 0x661111, emissiveIntensity: 0.4 });
+function spawnTarget() {
+  const t = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.15), targetMat.clone());
+  t.position.set((Math.random()-0.5)*40, 1.2 + Math.random()*2, (Math.random()-0.5)*40 - 10);
+  scene.add(t);
+  targets.push(t);
+}
+function clearTargets() {
+  targets.forEach(t => scene.remove(t));
+  targets.length = 0;
+}
+
+const orb = new THREE.Mesh(
+  new THREE.SphereGeometry(0.45, 16, 16),
+  new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x0e7490, emissiveIntensity: 0.6 })
+);
+orb.visible = false;
+scene.add(orb);
+let trackT = 0;
+
+const raycaster = new THREE.Raycaster();
+
+function shoot() {
+  if (!gameActive) return;
+  shots++;
+  gun.children[0].material.emissive = new THREE.Color(0xffaa44);
+  gun.children[0].material.emissiveIntensity = 2;
+  setTimeout(() => { gun.children[0].material.emissiveIntensity = 0; }, 40);
+  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+  const hitsList = raycaster.intersectObjects(targets, false);
+  if (hitsList.length) {
+    const hit = hitsList[0].object;
+    scene.remove(hit);
+    const i = targets.indexOf(hit);
+    if (i >= 0) targets.splice(i);
+    hits++;
+    addKill('You', 'target');
+    spawnTarget();
+  }
+  updateAcc();
+}
+
+function addKill(a, b) {
+  const d = document.createElement('div');
+  d.textContent = a + ' → ' + b;
+  killEl.prepend(d);
+  setTimeout(() => d.remove(), 3500);
+  while (killEl.children.length > 6) killEl.lastChild.remove();
+}
+
+function updateAcc() {
+  const a = shots ? Math.round(100 * hits / shots) : 0;
+  accEl.textContent = shots ? (a + '% (' + hits + '/' + shots + ')') : '–';
+}
+
+function setWeapon(w) {
+  weapon = w;
+  wpnEl.textContent = w.toUpperCase();
+  gun.visible = w === 'awp';
+  knife.visible = w === 'knife';
+  if (w === 'knife') scoped = false;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'KeyW') keys.w = 1;
+  if (e.code === 'KeyA') keys.a = 1;
+  if (e.code === 'KeyS') keys.s = 1;
+  if (e.code === 'KeyD') keys.d = 1;
+  if (e.code === 'Space') { keys.space = 1; e.preventDefault(); }
+  if (e.code === 'Digit1') setWeapon('awp');
+  if (e.code === 'Digit2') setWeapon('knife');
+  if (e.code === 'KeyT' && !e.repeat) third = !third;
+  if (e.code === 'Escape') showMenu();
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'KeyW') keys.w = 0;
+  if (e.code === 'KeyA') keys.a = 0;
+  if (e.code === 'KeyS') keys.s = 0;
+  if (e.code === 'KeyD') keys.d = 0;
+  if (e.code === 'Space') keys.space = 0;
+});
+document.addEventListener('mousemove', e => {
+  if (document.pointerLockElement !== canvas) return;
+  const sens = scoped ? 0.0011 : 0.0022;
+  yaw -= e.movementX * sens;
+  pitch -= e.movementY * sens;
+  pitch = Math.max(-1.45, Math.min(1.45, pitch));
+});
+canvas.addEventListener('mousedown', e => {
+  if (!gameActive) return;
+  if (document.pointerLockElement !== canvas) {
+    canvas.requestPointerLock();
+    return;
+  }
+  if (e.button === 0) shoot();
+  if (e.button === 2 && weapon === 'awp') {
+    scoped = !scoped;
+    camera.fov = scoped ? 32 : 75;
+    camera.updateProjectionMatrix();
+  }
+});
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+function startMode(m) {
+  mode = m;
+  gameActive = true;
+  menu.classList.add('hidden');
+  back.classList.add('visible');
+  modeEl.textContent = m;
+  hits = shots = 0;
+  updateAcc();
+  clearTargets();
+  if (m === 'squares') {
+    for (let i = 0; i < 6; i++) spawnTarget();
+    orb.visible = false;
+  } else {
+    orb.visible = true;
+    trackT = 0;
+  }
+  px = 0; py = 1.7; pz = 8;
+  vx = vy = vz = 0;
+  yaw = 0; pitch = 0;
+  setWeapon('awp');
+  canvas.requestPointerLock().catch(()=>{});
+}
+function showMenu() {
+  gameActive = false;
+  mode = null;
+  menu.classList.remove('hidden');
+  back.classList.remove('visible');
+  modeEl.textContent = '';
+  clearTargets();
+  orb.visible = false;
+  scoped = false;
+  camera.fov = 75;
+  camera.updateProjectionMatrix();
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+document.querySelectorAll('.card').forEach(c => c.addEventListener('click', () => startMode(c.dataset.m)));
+back.addEventListener('click', e => { e.stopPropagation(); showMenu(); });
+
+let frames = 0, ft = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  frames++; ft += dt;
+  if (ft >= 0.5) {
+    fpsEl.textContent = 'FPS ' + Math.round(frames / ft);
+    frames = 0; ft = 0;
+  }
+
+  if (gameActive) {
+    const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+    const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+    let wish = new THREE.Vector3();
+    if (keys.w) wish.add(forward);
+    if (keys.s) wish.sub(forward);
+    if (keys.a) wish.sub(right);
+    if (keys.d) wish.add(right);
+    if (wish.lengthSq() > 0) wish.normalize();
+
+    if (onGround) {
+      const cur = new THREE.Vector3(vx, 0, vz);
+      const speed = cur.dot(wish);
+      const add = ACCEL * dt;
+      if (speed < MOVE) {
+        const can = Math.min(MOVE - speed, add);
+        vx += wish.x * can * MOVE;
+        vz += wish.z * can * MOVE;
+      }
+      const sp = Math.hypot(vx, vz);
+      if (sp > 0.01) {
+        const drop = Math.max(0, 1 - FRICTION * dt);
+        vx *= drop; vz *= drop;
+      } else { vx = vz = 0; }
+      if (keys.space) { vy = JUMP_V; onGround = false; }
+    } else {
+      vx += wish.x * 12 * dt;
+      vz += wish.z * 12 * dt;
+      const sp = Math.hypot(vx, vz);
+      if (sp > MOVE * 1.4) { vx *= (MOVE*1.4)/sp; vz *= (MOVE*1.4)/sp; }
+    }
+    vy -= GRAVITY * dt;
+    px += vx * dt;
+    py += vy * dt;
+    pz += vz * dt;
+    if (py <= 1.7) { py = 1.7; vy = 0; onGround = true; }
+    spdEl.textContent = Math.hypot(vx, vz).toFixed(1) + ' u/s';
+
+    if (third) {
+      const dist = 4.5;
+      camera.position.set(px + Math.sin(yaw) * dist, py + 1.6, pz + Math.cos(yaw) * dist);
+      camera.lookAt(px, py + 0.9, pz);
+      gun.visible = false;
+      knife.visible = false;
+    } else {
+      camera.position.set(px, py, pz);
+      camera.rotation.order = 'YXZ';
+      camera.rotation.y = yaw;
+      camera.rotation.x = pitch;
+      gun.visible = weapon === 'awp';
+      knife.visible = weapon === 'knife';
+    }
+
+    if (mode === 'tracking') {
+      trackT += dt;
+      orb.position.set(Math.sin(trackT * 0.9) * 12, 1.8 + Math.sin(trackT * 1.3) * 0.8, -8 + Math.cos(trackT * 0.6) * 6);
+    }
+  } else {
+    camera.position.set(0, 3, 12);
+    camera.lookAt(0, 1, 0);
+  }
+
+  renderer.render(scene, camera);
+}
+animate();
+console.log('Aim trainer ready');
 </script></body></html>
